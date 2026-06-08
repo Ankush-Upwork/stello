@@ -18,7 +18,13 @@ import { formatCurrency } from "@/lib/utils";
 
 type Row = StarterProduct & { include: boolean };
 
-export function QuickSetup({ allowed }: { allowed: boolean }) {
+export function QuickSetup({
+  allowed,
+  remaining,
+}: {
+  allowed: boolean;
+  remaining?: number | null;
+}) {
   const router = useRouter();
   const [description, setDescription] = React.useState("");
   const [rows, setRows] = React.useState<Row[] | null>(null);
@@ -28,8 +34,8 @@ export function QuickSetup({ allowed }: { allowed: boolean }) {
   if (!allowed) {
     return (
       <UpgradeNudge
-        title="AI Quick Setup is a paid feature"
-        description="Upgrade to Starter or higher to auto-generate a starter product catalogue for your shop."
+        title="You've used your 5 free AI requests"
+        description="Upgrade to keep using AI Quick Setup and the other AI features."
       />
     );
   }
@@ -70,10 +76,18 @@ export function QuickSetup({ allowed }: { allowed: boolean }) {
     }
   }
 
+  const trialHint =
+    remaining != null ? (
+      <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+        {remaining} free AI request{remaining === 1 ? "" : "s"} left on the Free plan.
+      </p>
+    ) : null;
+
   if (rows) {
     const count = rows.filter((r) => r.include).length;
     return (
       <div className="space-y-4">
+        {trialHint}
         <p className="text-sm text-muted-foreground">
           Review the suggestions, untick anything you don&apos;t sell, then add
           them. You can edit prices &amp; stock later.
@@ -128,6 +142,7 @@ export function QuickSetup({ allowed }: { allowed: boolean }) {
   return (
     <Card>
       <CardContent className="space-y-4 py-5">
+        {trialHint}
         <p className="text-sm text-muted-foreground">
           We&apos;ll suggest a starter catalogue based on your shop type. Add an
           optional note to tailor it (e.g. &quot;mostly cotton kurtis and sarees&quot;).

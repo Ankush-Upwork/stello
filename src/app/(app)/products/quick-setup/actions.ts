@@ -6,8 +6,11 @@ import { bulkCreateProducts } from "@/app/(app)/products/import/actions";
 import { aiJson, AiError } from "@/lib/ai/openai";
 import { getCurrentUser } from "@/lib/auth";
 import { businessTypeLabel } from "@/lib/constants";
-import { getUserPlan, planHasAiFeatures } from "@/lib/queries/subscription";
+import { getAiGate, recordAiUsage } from "@/lib/queries/subscription";
 import { createClient } from "@/lib/supabase/server";
+
+const FREE_CAP_MSG =
+  "You've used all 5 free AI requests. Upgrade to keep using AI.";
 
 const draftSchema = z.object({
   products: z
@@ -40,9 +43,9 @@ export async function generateStarterProducts(
   if (!user) return { ok: false, error: "Please log in again." };
 
   const supabase = await createClient();
-  const plan = await getUserPlan(supabase, user.id);
-  if (!planHasAiFeatures(plan)) {
-    return { ok: false, error: "AI setup is available on paid plans.", gated: true };
+  const gate = await getAiGate(supabase, user.id);
+  if (!gate.allowed) {
+    return { ok: false, error: FREE_CAP_MSG, gated: true };
   }
 
   const { data: business } = await supabase
@@ -68,6 +71,7 @@ Return ONLY JSON: { "products": [ { "product_name": "", "category": "", "selling
     if (products.length === 0) {
       return { ok: false, error: "Couldn't generate products. Try adding a short description." };
     }
+    await recordAiUsage(supabase, user.id, "quick_setup");
     return { ok: true, products };
   } catch (err) {
     return {

@@ -11,7 +11,7 @@ import {
   fetchItemsForSales,
   fetchSalesInRange,
 } from "@/lib/queries/reports";
-import { getUserPlan, planHasAiFeatures } from "@/lib/queries/subscription";
+import { getAiGate, recordAiUsage } from "@/lib/queries/subscription";
 import { createClient } from "@/lib/supabase/server";
 
 export type RestockItem = {
@@ -45,9 +45,13 @@ export async function getRestockSuggestions(): Promise<RestockResult> {
   if (!user) return { ok: false, error: "Please log in again." };
 
   const supabase = await createClient();
-  const plan = await getUserPlan(supabase, user.id);
-  if (!planHasAiFeatures(plan)) {
-    return { ok: false, error: "AI restock is available on paid plans.", gated: true };
+  const gate = await getAiGate(supabase, user.id);
+  if (!gate.allowed) {
+    return {
+      ok: false,
+      error: "You've used all 5 free AI requests. Upgrade to keep using AI.",
+      gated: true,
+    };
   }
 
   // Low / out-of-stock candidates (variant-aware).
@@ -97,6 +101,7 @@ Return ONLY JSON: { "summary": "one friendly sentence", "items": [ { "product_id
       };
     });
 
+    await recordAiUsage(supabase, user.id, "restock");
     return { ok: true, items: merged, summary: parsed.summary || "Here are your reorder suggestions." };
   } catch (err) {
     return {

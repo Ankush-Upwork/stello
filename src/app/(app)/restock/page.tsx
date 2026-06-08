@@ -5,7 +5,7 @@ import { ArrowLeft, Sparkles } from "lucide-react";
 import { RestockClient } from "@/app/(app)/restock/restock-client";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth";
-import { getUserPlan, planHasAiFeatures } from "@/lib/queries/subscription";
+import { getAiGate } from "@/lib/queries/subscription";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "AI Restock · Sello" };
@@ -15,7 +15,7 @@ export default async function RestockPage() {
   if (!user) redirect("/login");
 
   const supabase = await createClient();
-  const plan = await getUserPlan(supabase, user.id);
+  const gate = await getAiGate(supabase, user.id);
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-5">
@@ -29,7 +29,7 @@ export default async function RestockPage() {
           <Sparkles className="h-6 w-6 text-primary" /> AI Restock
         </h1>
       </div>
-      <RestockClient allowed={planHasAiFeatures(plan)} />
+      <RestockClient allowed={gate.allowed} remaining={gate.paid ? null : gate.remaining} />
     </div>
   );
 }

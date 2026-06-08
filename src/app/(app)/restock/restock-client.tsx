@@ -13,7 +13,13 @@ import { UpgradeNudge } from "@/components/upgrade-nudge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
-export function RestockClient({ allowed }: { allowed: boolean }) {
+export function RestockClient({
+  allowed,
+  remaining,
+}: {
+  allowed: boolean;
+  remaining?: number | null;
+}) {
   const [loading, setLoading] = React.useState(false);
   const [done, setDone] = React.useState(false);
   const [items, setItems] = React.useState<RestockItem[]>([]);
@@ -22,8 +28,8 @@ export function RestockClient({ allowed }: { allowed: boolean }) {
   if (!allowed) {
     return (
       <UpgradeNudge
-        title="AI Restock is a paid feature"
-        description="Upgrade to Starter or higher to get smart reorder suggestions based on your sales."
+        title="You've used your 5 free AI requests"
+        description="Upgrade to keep using AI Restock and the other AI features."
       />
     );
   }
@@ -46,6 +52,11 @@ export function RestockClient({ allowed }: { allowed: boolean }) {
 
   return (
     <div className="space-y-4">
+      {remaining != null && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+          {remaining} free AI request{remaining === 1 ? "" : "s"} left on the Free plan.
+        </p>
+      )}
       {!done && (
         <Card>
           <CardContent className="space-y-4 py-6 text-center">

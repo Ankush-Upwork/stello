@@ -18,9 +18,50 @@ export const FREE_PLAN_FALLBACK: Plan = {
   ai_assistant_limit: 0,
 };
 
-/** Whether the plan includes the "cheap four" AI features (paid tiers). */
+/** Whether the plan includes unlimited AI features (paid tiers). */
 export function planHasAiFeatures(plan: Plan): boolean {
   return plan.ai_features;
+}
+
+/** Free accounts get this many AI requests total (lifetime), then must upgrade. */
+export const FREE_TRIAL_AI_LIMIT = 5;
+
+export type AiGate = {
+  allowed: boolean;
+  paid: boolean;
+  used: number;
+  remaining: number | null; // null = unlimited
+  limit: number | null;
+};
+
+/** Decide if a user may run an AI action right now (paid = unlimited; free = 5 lifetime). */
+export async function getAiGate(supabase: SB, userId: string): Promise<AiGate> {
+  const plan = await getUserPlan(supabase, userId);
+  if (plan.ai_features) {
+    return { allowed: true, paid: true, used: 0, remaining: null, limit: null };
+  }
+  const { count } = await supabase
+    .from("ai_usage")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId);
+  const used = count ?? 0;
+  const remaining = Math.max(0, FREE_TRIAL_AI_LIMIT - used);
+  return {
+    allowed: remaining > 0,
+    paid: false,
+    used,
+    remaining,
+    limit: FREE_TRIAL_AI_LIMIT,
+  };
+}
+
+/** Log one AI request (counts toward the free trial / Ask Sello caps). */
+export async function recordAiUsage(
+  supabase: SB,
+  userId: string,
+  kind: string
+): Promise<void> {
+  await supabase.from("ai_usage").insert({ user_id: userId, kind });
 }
 
 /** Monthly Ask Sello cap: 0 = not allowed, null = unlimited. */

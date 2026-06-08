@@ -3,6 +3,8 @@
 import OpenAI from "openai";
 
 import { getCurrentUser } from "@/lib/auth";
+import { getAiGate, recordAiUsage } from "@/lib/queries/subscription";
+import { createClient } from "@/lib/supabase/server";
 import { aiDraftSchema, type AiDraft } from "@/lib/validations/ai";
 
 export type ParseResult =
@@ -51,6 +53,12 @@ export async function parseSaleText(text: string): Promise<ParseResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Your session expired. Please log in again." };
 
+  const supabase = await createClient();
+  const gate = await getAiGate(supabase, user.id);
+  if (!gate.allowed) {
+    return { ok: false, error: "You've used all 5 free AI requests. Upgrade to keep using AI." };
+  }
+
   if (!process.env.OPENAI_API_KEY) {
     return {
       ok: false,
@@ -80,6 +88,7 @@ export async function parseSaleText(text: string): Promise<ParseResult> {
       };
     }
 
+    await recordAiUsage(supabase, user.id, "sale_entry");
     return { ok: true, draft };
   } catch (err) {
     return {

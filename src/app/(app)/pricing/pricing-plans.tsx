@@ -2,10 +2,10 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Clock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { switchPlan } from "@/app/(app)/pricing/actions";
+import { requestUpgrade } from "@/app/(app)/pricing/actions";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Plan } from "@/lib/supabase/types";
@@ -13,21 +13,25 @@ import type { Plan } from "@/lib/supabase/types";
 export function PricingPlans({
   plans,
   currentPlanId,
+  pendingPlanId,
 }: {
   plans: Plan[];
   currentPlanId: string;
+  pendingPlanId: string | null;
 }) {
   const router = useRouter();
   const [pendingId, setPendingId] = React.useState<string | null>(null);
 
-  async function choose(planId: string) {
+  async function request(planId: string) {
     setPendingId(planId);
     try {
-      await switchPlan(planId);
-      toast.success("Plan updated.");
-      router.refresh();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not change plan.");
+      const res = await requestUpgrade(planId);
+      if (res.ok) {
+        toast.success("Upgrade requested — we'll activate it after payment.");
+        router.refresh();
+      } else {
+        toast.error(res.error);
+      }
     } finally {
       setPendingId(null);
     }
@@ -37,6 +41,8 @@ export function PricingPlans({
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       {plans.map((plan) => {
         const isCurrent = plan.id === currentPlanId;
+        const isPending = plan.id === pendingPlanId;
+        const isFree = plan.id === "free";
         const popular = plan.id === "pro";
         return (
           <div
@@ -71,15 +77,29 @@ export function PricingPlans({
               ))}
             </ul>
 
-            <Button
-              className="mt-5 w-full"
-              variant={isCurrent ? "outline" : popular ? "default" : "secondary"}
-              disabled={isCurrent || pendingId !== null}
-              onClick={() => choose(plan.id)}
-            >
-              {pendingId === plan.id && <Loader2 className="animate-spin" />}
-              {isCurrent ? "Current plan" : `Choose ${plan.name}`}
-            </Button>
+            {isCurrent ? (
+              <Button className="mt-5 w-full" variant="outline" disabled>
+                Current plan
+              </Button>
+            ) : isPending ? (
+              <Button className="mt-5 w-full" variant="secondary" disabled>
+                <Clock className="h-4 w-4" /> Pending approval
+              </Button>
+            ) : isFree ? (
+              <Button className="mt-5 w-full" variant="outline" disabled>
+                Free
+              </Button>
+            ) : (
+              <Button
+                className="mt-5 w-full"
+                variant={popular ? "default" : "secondary"}
+                disabled={pendingId !== null || pendingPlanId !== null}
+                onClick={() => request(plan.id)}
+              >
+                {pendingId === plan.id && <Loader2 className="animate-spin" />}
+                Request upgrade
+              </Button>
+            )}
           </div>
         );
       })}

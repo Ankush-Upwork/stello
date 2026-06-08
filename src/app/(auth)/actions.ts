@@ -77,19 +77,27 @@ export async function signup(
     return { error: error.message };
   }
 
-  // If email confirmation is OFF (recommended for dev), a session exists now.
+  // If email confirmation is OFF, a session exists now → go straight in.
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
   if (!session) {
-    return {
-      error:
-        "Account created. Please check your email to confirm, then log in.",
-    };
+    // Confirmation email sent — show the "check your inbox" screen.
+    redirect(`/verify-email?email=${encodeURIComponent(parsed.data.email)}`);
   }
 
   redirect("/settings/business-profile");
+}
+
+/** Resend the signup confirmation email. */
+export async function resendVerification(
+  email: string
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resend({ type: "signup", email });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
 }
 
 export async function logout() {

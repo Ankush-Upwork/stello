@@ -432,6 +432,40 @@ export interface Database {
         };
         Relationships: [];
       };
+      admins: {
+        Row: { user_id: string };
+        Insert: { user_id: string };
+        Update: { user_id?: string };
+        Relationships: [];
+      };
+      upgrade_requests: {
+        Row: {
+          id: string;
+          user_id: string;
+          email: string | null;
+          plan_id: string;
+          status: string;
+          note: string | null;
+          created_at: string;
+          decided_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          email?: string | null;
+          plan_id: string;
+          status?: string;
+          note?: string | null;
+          created_at?: string;
+          decided_at?: string | null;
+        };
+        Update: {
+          status?: string;
+          note?: string | null;
+          decided_at?: string | null;
+        };
+        Relationships: [];
+      };
       subscriptions: {
         Row: {
           id: string;
@@ -686,6 +720,8 @@ export type Customer = Database["public"]["Tables"]["customers"]["Row"];
 export type Sale = Database["public"]["Tables"]["sales"]["Row"];
 export type SaleItem = Database["public"]["Tables"]["sale_items"]["Row"];
 export type Plan = Database["public"]["Tables"]["plans"]["Row"];
+export type UpgradeRequest =
+  Database["public"]["Tables"]["upgrade_requests"]["Row"];
 export type Subscription = Database["public"]["Tables"]["subscriptions"]["Row"];
 export type Supplier = Database["public"]["Tables"]["suppliers"]["Row"];
 export type Purchase = Database["public"]["Tables"]["purchases"]["Row"];

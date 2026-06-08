@@ -12,9 +12,15 @@ export default async function PricingPage() {
   if (!user) redirect("/login");
 
   const supabase = await createClient();
-  const [plans, current] = await Promise.all([
+  const [plans, current, pendingRes] = await Promise.all([
     getAllPlans(supabase),
     getUserPlan(supabase, user.id),
+    supabase
+      .from("upgrade_requests")
+      .select("plan_id")
+      .eq("user_id", user.id)
+      .eq("status", "pending")
+      .maybeSingle(),
   ]);
 
   return (
@@ -22,15 +28,18 @@ export default async function PricingPage() {
       <div className="text-center">
         <h1 className="text-2xl font-bold">Plans &amp; pricing</h1>
         <p className="text-muted-foreground">
-          Pick the plan that fits your shop. Billing isn't live yet — switching is
-          free while we build it.
+          Pick a plan and request an upgrade — we&apos;ll activate it after payment.
         </p>
       </div>
 
-      <PricingPlans plans={plans} currentPlanId={current.id} />
+      <PricingPlans
+        plans={plans}
+        currentPlanId={current.id}
+        pendingPlanId={pendingRes.data?.plan_id ?? null}
+      />
 
       <p className="text-center text-xs text-muted-foreground">
-        Prices are placeholders. No payment is taken.
+        After you request, our team confirms your payment and activates the plan.
       </p>
     </div>
   );
